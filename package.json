@@ -33,6 +33,7 @@
     "timeout": 10000000
   },
   "dependencies": {
+    "@uniswap/hardhat-v3-deploy": "^0.1.1",
     "@uniswap/v3-periphery": "^1.4.1"
   }
 }

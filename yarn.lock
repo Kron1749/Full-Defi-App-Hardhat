@@ -1249,6 +1249,15 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
+"@uniswap/hardhat-v3-deploy@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@uniswap/hardhat-v3-deploy/-/hardhat-v3-deploy-0.1.1.tgz#8cdbb86f495a61385078b76c88df9e79e1b3ce02"
+  integrity sha512-Qtwj1cNqCgzjtAonoU+morZnZuYCtiPi76ThnW9oYwHAlmcZ6y8jmlP7A2IzNzRaztaafC3bOamLmCNSyYqqpQ==
+  dependencies:
+    "@uniswap/v3-core" "1.0.0"
+    "@uniswap/v3-periphery" "^1.0.1"
+    cli-table3 "^0.6.0"
+
 "@uniswap/lib@^4.0.1-alpha":
   version "4.0.1-alpha"
   resolved "https://registry.yarnpkg.com/@uniswap/lib/-/lib-4.0.1-alpha.tgz#2881008e55f075344675b3bca93f020b028fbd02"
