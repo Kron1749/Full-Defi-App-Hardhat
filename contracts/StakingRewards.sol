@@ -31,18 +31,23 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
+error StakingRewards__YouCantStakeZeroToken();
+error StakingRewards__YouDontHaveEnoughBalance();
+error StakingRewards__YouCantWithdrawZeroRewards();
+
+
 contract StakingRewards {
     IERC20 private immutable i_stakingToken;
     IERC20 private immutable i_rewardsToken;
 
-    address private owner;
+    address private s_owner;
     uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;
 
     // uint256 private s_amount_of_stakingToken;
     // uint256 private s_amount_of_rewardToken;
 
     constructor(address _stakingToken,address _rewardsToken) {
-        owner = msg.sender;
+        s_owner = msg.sender;
         i_stakingToken = IERC20(_stakingToken);
         i_rewardsToken = IERC20(_rewardsToken);
     }
@@ -60,7 +65,7 @@ contract StakingRewards {
     mapping(address=>Staker) private s_stakers;
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "not authorized");
+        require(msg.sender == s_owner, "not authorized");
         _;
     }
 
@@ -79,7 +84,8 @@ contract StakingRewards {
 
 
     function stakeTokens(uint256 _amount) payable external updateRewards(msg.sender) {
-        require(_amount > 0, "amount = 0");
+        if(_amount<0) {revert StakingRewards__YouCantStakeZeroToken();}
+        
         s_stakers[msg.sender].tokensStaked += _amount;
         // s_amount_of_stakingToken += _amount;
         i_stakingToken.transfer(msg.sender, _amount);
@@ -87,6 +93,8 @@ contract StakingRewards {
     }
 
     function withdrawTokens(uint256 _amount) payable external updateRewards(msg.sender) {
+        if(_amount<0) {revert StakingRewards__YouCantStakeZeroToken();}
+        if(s_stakers[msg.sender].tokensStaked <= _amount) {revert StakingRewards__YouDontHaveEnoughBalance();}
         require(_amount > 0, "amount = 0");
         s_stakers[msg.sender].tokensStaked -= _amount;
         // s_amount_of_stakingToken -= _amount;
@@ -94,6 +102,7 @@ contract StakingRewards {
     }
 
     function withdrawRewards() payable external updateRewards(msg.sender){
+        if(s_stakers[msg.sender].rewards==0) {revert StakingRewards__YouCantWithdrawZeroRewards();}
         uint reward = s_stakers[msg.sender].rewards;
         if (reward > 0) {
             s_stakers[msg.sender].rewards = 0;
@@ -147,7 +156,7 @@ contract StakingRewards {
     }
 
     function getOwner() public view returns(address) {
-        return owner;
+        return s_owner;
     }
 
     // function getAmountOfStakingTokens() public view returns(uint256) {

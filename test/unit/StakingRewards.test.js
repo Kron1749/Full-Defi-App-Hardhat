@@ -63,25 +63,34 @@ const { developmentChains } = require("../../helper-hardhat-config")
                 assert.equal(startStakingTime.toString(),timestamp)
             })
             it("Must stake tokens first time for N seconds and get proper reward",async function(){
+
+                // Initial values
                 const playerConnectedToStakingRewards = stakingRewards.connect(player)
                 const plAddress = player.address
+                const amountOfStakedTokens = 5
+                const stakedRatio = amountOfStakedTokens*1 // 1 is rate per 1 token
 
-                //Stake 2 tokens,but not mine block
-                await playerConnectedToStakingRewards.stakeTokens(2)
+                //Stake tokens and get when this token was staked
+                await playerConnectedToStakingRewards.stakeTokens(amountOfStakedTokens)
                 const numberOfBlockBefore = await ethers.provider.getBlockNumber();
                 const blockBefore = await ethers.provider.getBlock(numberOfBlockBefore);
-                const timestampBefore = blockBefore.timestamp;
+                const timestampBeforeMine = blockBefore.timestamp;
 
-                //Mine block
-                await network.provider.send("evm_increaseTime", [1])
+                //Wait for 7 seconds and get timestamp after wait
+                await network.provider.send("evm_increaseTime", [7])
                 await network.provider.send("evm_mine")
+                const numberOfBlockAfterMine = await ethers.provider.getBlockNumber();
+                const blockAfterMine = await ethers.provider.getBlock(numberOfBlockAfterMine);
+                const timestampAfterMine = blockAfterMine.timestamp;
+                const difMine = timestampAfterMine-timestampBeforeMine 
+
+                // Update rewards and get
                 await playerConnectedToStakingRewards.updateRewardsStats()
-                //Get timestamp of block
                 const numberOfBlockAfter = await ethers.provider.getBlockNumber();
                 const blockAfter = await ethers.provider.getBlock(numberOfBlockAfter);
-                const timestampAfter = blockAfter.timestamp;
-
-
+                const timestampAfterUpdateRewards = blockAfter.timestamp;
+                const difUpdateRewards = timestampAfterUpdateRewards-timestampAfterMine
+                const constRewardsByCalculating = (difUpdateRewards+difMine)*1*amountOfStakedTokens// 1 is rate per staked token
 
                 //Declare variables
                 const isStaking = await playerConnectedToStakingRewards.getIsStaking(plAddress)
@@ -91,52 +100,73 @@ const { developmentChains } = require("../../helper-hardhat-config")
                 const finishStakingTime = await playerConnectedToStakingRewards.getFinishedStakingTime(plAddress)
                 let duration = await playerConnectedToStakingRewards.getDuration(plAddress)
                 const startStakingTime = await playerConnectedToStakingRewards.getStartStakingTime(plAddress)
-                duration = timestampAfter-timestampBefore
-
+                duration = timestampAfterUpdateRewards-timestampAfterMine
+                
                 // Assert
                 assert.equal(isStaking,true)
-                assert.equal(tokensStaked.toString(),2)
-                assert.equal(rewards.toString(),4)
-                assert.equal(stakedRate.toString(),2)
-                assert.equal(finishStakingTime.toString(),timestampAfter)
+                assert.equal(tokensStaked.toString(),amountOfStakedTokens)
+                assert.equal(rewards.toString(),constRewardsByCalculating)
+                assert.equal(stakedRate.toString(),stakedRatio)
+                assert.equal(finishStakingTime.toString(),timestampAfterUpdateRewards)
                 assert.equal(duration.toString(),duration)
-                assert.equal(startStakingTime.toString(),timestampAfter)
+                assert.equal(startStakingTime.toString(),timestampAfterUpdateRewards)
             })
             it("Should stake more tokens and get proper rewards",async function(){
 
+                //Initial values
                 const playerConnectedToStakingRewards = stakingRewards.connect(player)
                 const plAddress = player.address
+                const firstAmountOfStakedTokens = 6
+                const secondAmountOfStakedTokens = 5
+                const allAmountOfStakedTokens = firstAmountOfStakedTokens+secondAmountOfStakedTokens
+                const firstStakedRatio = firstAmountOfStakedTokens*1
+                const secondStakedRatio = allAmountOfStakedTokens*1
 
-                //Staked for first time,but not mine block
-                await playerConnectedToStakingRewards.stakeTokens(2)
-                
-                
-                //mine block after first staking
-                await network.provider.send("evm_increaseTime", [1])
-                await network.provider.send("evm_mine")
+                //Stake tokensfirst time and get when this token was staked
+                const numberOfBlockBeforeMineFirstTime = await ethers.provider.getBlockNumber();
+                const blockBeforeFirstTime = await ethers.provider.getBlock(numberOfBlockBeforeMineFirstTime);
+                const timestampBeforeMineFirstTime = blockBeforeFirstTime.timestamp;
 
-               
+                await playerConnectedToStakingRewards.stakeTokens(firstAmountOfStakedTokens)
 
-                //Stake for second time,but not mine block
-                await playerConnectedToStakingRewards.stakeTokens(2)
-                
-                const numberOfBlockStakedForSecondTime = await ethers.provider.getBlockNumber();
-                const blockStakedForSecondTime = await ethers.provider.getBlock(numberOfBlockStakedForSecondTime);
-                const timestampOfBlockMinedBeforeForSecondTime = blockStakedForSecondTime.timestamp;
-                
+                 //Wait for N seconds and get timestamp after wait
+                 await network.provider.send("evm_increaseTime", [1])
+                 await network.provider.send("evm_mine")
+                 const numberOfBlockAfterMineFirstTime = await ethers.provider.getBlockNumber();
+                 const blockAfterMineFirstTime = await ethers.provider.getBlock(numberOfBlockAfterMineFirstTime);
+                 const timestampAfterMineFirstTime = blockAfterMineFirstTime.timestamp;
+                 const difMineFirstTime = timestampAfterMineFirstTime-timestampBeforeMineFirstTime
+                 const rewardByCalculatingFirst = difMineFirstTime*firstStakedRatio
 
-                //mine block after second staking and wait for 2 seconds
-                await network.provider.send("evm_increaseTime", [1])
-                await network.provider.send("evm_mine")
+                //Stake tokens second time and get when this token was staked
+                await playerConnectedToStakingRewards.stakeTokens(secondAmountOfStakedTokens)
+                const numberOfBlockBeforeSecondTime = await ethers.provider.getBlockNumber();
+                const blockBeforeSecondTime = await ethers.provider.getBlock(numberOfBlockBeforeSecondTime);
+                const timestampBeforeMineSecondTime = blockBeforeSecondTime.timestamp;
+
+                 //Wait for N seconds and get timestamp after wait
+                 await network.provider.send("evm_increaseTime", [2])
+                 await network.provider.send("evm_mine")
+                 const numberOfBlockAfterMineSecondTime = await ethers.provider.getBlockNumber();
+                 const blockAfterMineSecondTime = await ethers.provider.getBlock(numberOfBlockAfterMineSecondTime);
+                 const timestampAfterMineSecondTime = blockAfterMineSecondTime.timestamp;
+                 const difMineSecondTime = timestampAfterMineSecondTime-timestampBeforeMineSecondTime
+                 const rewardByCalculatingSecond = (difMineSecondTime*secondStakedRatio)
+                 console.log(difMineSecondTime)
+                 console.log(rewardByCalculatingSecond)
+
+
+                 // Update rewards and get
                 await playerConnectedToStakingRewards.updateRewardsStats()
+                const numberOfBlockAfter = await ethers.provider.getBlockNumber();
+                const blockAfter = await ethers.provider.getBlock(numberOfBlockAfter);
+                const timestampAfterUpdateRewards = blockAfter.timestamp;
+                const difUpdateRewards = timestampAfterUpdateRewards-timestampAfterMineSecondTime
+                const rewardAfterUpdating = difUpdateRewards*secondStakedRatio
+                const rewardByCalculating = rewardByCalculatingFirst+rewardByCalculatingSecond+rewardAfterUpdating
 
-                const numberOfBlockMinedAfterSecondStaked = await ethers.provider.getBlockNumber();
-                const blockMinedAfterSecondStaked = await ethers.provider.getBlock(numberOfBlockMinedAfterSecondStaked);
-                const timestampOfBlockMinedAfterSecondStaked = blockMinedAfterSecondStaked.timestamp;
-                
 
-
-     
+                //Assert
                 const isStaking = await playerConnectedToStakingRewards.getIsStaking(plAddress)
                 const tokensStaked = await playerConnectedToStakingRewards.getTokensStaked(plAddress)
                 const rewards = await playerConnectedToStakingRewards.getRewards(plAddress)
@@ -144,16 +174,15 @@ const { developmentChains } = require("../../helper-hardhat-config")
                 const finishStakingTime = await playerConnectedToStakingRewards.getFinishedStakingTime(plAddress)
                 let duration = await playerConnectedToStakingRewards.getDuration(plAddress)
                 const startStakingTime = await playerConnectedToStakingRewards.getStartStakingTime(plAddress)
-                duration = timestampOfBlockMinedAfterSecondStaked-timestampOfBlockMinedBeforeForSecondTime
+                duration = timestampAfterUpdateRewards-timestampAfterMineSecondTime
 
-                //Assert
                 assert.equal(isStaking,true)
-                assert.equal(tokensStaked.toString(),4)
-                assert.equal(rewards.toString(),12)
-                assert.equal(stakedRate.toString(),4)
-                assert.equal(finishStakingTime.toString(),timestampOfBlockMinedAfterSecondStaked)
+                assert.equal(tokensStaked.toString(),allAmountOfStakedTokens)
+                assert.equal(rewards.toString(),rewardByCalculating)
+                assert.equal(stakedRate.toString(),secondStakedRatio)
+                assert.equal(finishStakingTime.toString(),timestampAfterUpdateRewards)
                 assert.equal(duration.toString(),duration)
-                assert.equal(startStakingTime.toString(),timestampOfBlockMinedAfterSecondStaked)
+                assert.equal(startStakingTime.toString(),timestampAfterUpdateRewards)
             })
         })
 })
