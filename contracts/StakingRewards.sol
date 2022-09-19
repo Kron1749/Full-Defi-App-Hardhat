@@ -32,11 +32,14 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract StakingRewards {
-    IERC20 public immutable i_stakingToken;
-    IERC20 public immutable i_rewardsToken;
+    IERC20 private immutable i_stakingToken;
+    IERC20 private immutable i_rewardsToken;
 
-    address public owner;
+    address private owner;
     uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;
+
+    // uint256 private s_amount_of_stakingToken;
+    // uint256 private s_amount_of_rewardToken;
 
     constructor(address _stakingToken,address _rewardsToken) {
         owner = msg.sender;
@@ -54,7 +57,7 @@ contract StakingRewards {
         uint256 duration;
     }
 
-    mapping(address=>Staker) private stakers;
+    mapping(address=>Staker) private s_stakers;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "not authorized");
@@ -62,67 +65,98 @@ contract StakingRewards {
     }
 
     modifier updateRewards(address _account){
-        if(!stakers[msg.sender].isStaking) {
-            stakers[_account].startStakingTime = block.timestamp;
+        if(!s_stakers[msg.sender].isStaking) {
+            s_stakers[_account].startStakingTime = block.timestamp;
         } else {
-            stakers[_account].stakedRate = stakers[_account].tokensStaked*REWARD_FOR_ONE_TOKEN_STAKED;
-            stakers[_account].finishedStakingTime = block.timestamp;
-            stakers[_account].duration = stakers[_account].finishedStakingTime - stakers[_account].startStakingTime;
-            stakers[_account].rewards += (stakers[_account].stakedRate*stakers[_account].duration);
-            stakers[_account].startStakingTime = block.timestamp;
+            s_stakers[_account].stakedRate = s_stakers[_account].tokensStaked*REWARD_FOR_ONE_TOKEN_STAKED;
+            s_stakers[_account].finishedStakingTime = block.timestamp;
+            s_stakers[_account].duration = s_stakers[_account].finishedStakingTime - s_stakers[_account].startStakingTime;
+            s_stakers[_account].rewards += (s_stakers[_account].stakedRate*s_stakers[_account].duration);
+            s_stakers[_account].startStakingTime = block.timestamp;
         }    
         _;
     }
 
 
-    function stakeTokens(uint256 _amount) external updateRewards(msg.sender) {
+    function stakeTokens(uint256 _amount) payable external updateRewards(msg.sender) {
         require(_amount > 0, "amount = 0");
-        stakers[msg.sender].tokensStaked += _amount;
+        s_stakers[msg.sender].tokensStaked += _amount;
+        // s_amount_of_stakingToken += _amount;
         i_stakingToken.transfer(msg.sender, _amount);
-        stakers[msg.sender].isStaking = true;
+        s_stakers[msg.sender].isStaking = true;
     }
 
-    function withdrawTokens(uint256 _amount) external updateRewards(msg.sender) {
+    function withdrawTokens(uint256 _amount) payable external updateRewards(msg.sender) {
         require(_amount > 0, "amount = 0");
-        stakers[msg.sender].tokensStaked -= _amount;
+        s_stakers[msg.sender].tokensStaked -= _amount;
+        // s_amount_of_stakingToken -= _amount;
         i_stakingToken.transfer(msg.sender, _amount);
     }
 
-    function withdrawRewards() external updateRewards(msg.sender){
-        uint reward = stakers[msg.sender].rewards;
+    function withdrawRewards() payable external updateRewards(msg.sender){
+        uint reward = s_stakers[msg.sender].rewards;
         if (reward > 0) {
-            stakers[msg.sender].rewards = 0;
+            s_stakers[msg.sender].rewards = 0;
             i_rewardsToken.transfer(msg.sender, reward);
         }
+        // s_amount_of_rewardToken -= reward;
+    }
+
+    function updateRewardsStats() external updateRewards(msg.sender){
+
+    }
+
+    function supplyWithRewardToken(uint256 _amount) public {
+
     }
 
     function getIsStaking(address _account) public view returns(bool) {
-        return stakers[_account].isStaking;
+        return s_stakers[_account].isStaking;
     }
 
     function getTokensStaked(address _account) public view returns(uint256) {
-        return stakers[_account].tokensStaked;
+        return s_stakers[_account].tokensStaked;
     }
 
     function getRewards(address _account) public view returns(uint256) {
-        return stakers[_account].rewards;
+        return s_stakers[_account].rewards;
     }
 
     function getStakedRate(address _account) public view returns(uint256) {
-        return stakers[_account].stakedRate;
+        return s_stakers[_account].stakedRate;
     }
 
     function getStartStakingTime(address _account) public view returns(uint256) {
-        return stakers[_account].startStakingTime;
+        return s_stakers[_account].startStakingTime;
     }
 
     function getFinishedStakingTime(address _account) public view returns(uint256) {
-        return stakers[_account].finishedStakingTime;
+        return s_stakers[_account].finishedStakingTime;
     }
 
     function getDuration(address _account) public view returns(uint256) {
-        return stakers[_account].duration;
+        return s_stakers[_account].duration;
     }
+
+    function getStakingToken() public view returns(address){
+        return address(i_stakingToken);
+    }
+
+    function getRewardToken() public view returns(address) {
+        return address(i_rewardsToken);
+    }
+
+    function getOwner() public view returns(address) {
+        return owner;
+    }
+
+    // function getAmountOfStakingTokens() public view returns(uint256) {
+    //     return s_amount_of_stakingToken;
+    // }
+
+    // function getAmountOfRewardTokens() public view returns(uint256) {
+    //     return s_amount_of_rewardToken;
+    // }
 
     
 
