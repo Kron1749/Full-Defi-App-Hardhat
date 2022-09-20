@@ -25,33 +25,18 @@
 
 */
 
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 error StakingRewards__YouCantStakeZeroToken();
 error StakingRewards__YouDontHaveEnoughBalance();
 error StakingRewards__YouCantWithdrawZeroRewards();
-
+error StakingRewards__DontHaveEnoughTokensToStake();
+error StakingRewards__ContractDontHaveEnoughRewardBalance();
 
 contract StakingRewards {
-    IERC20 private immutable i_stakingToken;
-    IERC20 private immutable i_rewardsToken;
-
-    address private s_owner;
-    uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;
-
-    // uint256 private s_amount_of_stakingToken;
-    // uint256 private s_amount_of_rewardToken;
-
-    constructor(address _stakingToken,address _rewardsToken) {
-        s_owner = msg.sender;
-        i_stakingToken = IERC20(_stakingToken);
-        i_rewardsToken = IERC20(_rewardsToken);
-    }
-
     struct Staker {
         bool isStaking;
         uint256 tokensStaked;
@@ -62,100 +47,122 @@ contract StakingRewards {
         uint256 duration;
     }
 
-    mapping(address=>Staker) private s_stakers;
+    event TokensStake(address indexed account, uint256 indexed amount);
+    event TokensWithdraw(address indexed account, uint256 indexed amount);
+    event RewardWithdraw(address indexed account, uint256 indexed amount);
 
-    modifier onlyOwner() {
-        require(msg.sender == s_owner, "not authorized");
-        _;
+    IERC20 private immutable i_stakingToken;
+    IERC20 private immutable i_rewardsToken;
+
+    address private s_owner;
+    uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;
+
+    // uint256 private s_amount_of_stakingToken;
+    // uint256 private s_amount_of_rewardToken;
+
+    constructor(address _stakingToken, address _rewardsToken) {
+        s_owner = msg.sender;
+        i_stakingToken = IERC20(_stakingToken);
+        i_rewardsToken = IERC20(_rewardsToken);
     }
 
-    modifier updateRewards(address _account){
-        if(!s_stakers[msg.sender].isStaking) {
+    mapping(address => Staker) private s_stakers;
+
+    modifier updateRewards(address _account) {
+        if (!s_stakers[msg.sender].isStaking) {
             s_stakers[_account].startStakingTime = block.timestamp;
         } else {
-            s_stakers[_account].stakedRate = s_stakers[_account].tokensStaked*REWARD_FOR_ONE_TOKEN_STAKED;
+            s_stakers[_account].stakedRate =
+                s_stakers[_account].tokensStaked *
+                REWARD_FOR_ONE_TOKEN_STAKED;
             s_stakers[_account].finishedStakingTime = block.timestamp;
-            s_stakers[_account].duration = s_stakers[_account].finishedStakingTime - s_stakers[_account].startStakingTime;
-            s_stakers[_account].rewards += (s_stakers[_account].stakedRate*s_stakers[_account].duration);
+            s_stakers[_account].duration =
+                s_stakers[_account].finishedStakingTime -
+                s_stakers[_account].startStakingTime;
+            s_stakers[_account].rewards += (s_stakers[_account].stakedRate *
+                s_stakers[_account].duration);
             s_stakers[_account].startStakingTime = block.timestamp;
-        }    
+        }
         _;
     }
 
-
-    function stakeTokens(uint256 _amount) payable external updateRewards(msg.sender) {
-        if(_amount<0) {revert StakingRewards__YouCantStakeZeroToken();}
-        
+    function stakeTokens(uint256 _amount) external payable updateRewards(msg.sender) {
+        if (_amount <= 0) {
+            revert StakingRewards__YouCantStakeZeroToken();
+        }
+        if (i_stakingToken.balanceOf(msg.sender) < _amount) {
+            revert StakingRewards__DontHaveEnoughTokensToStake();
+        }
         s_stakers[msg.sender].tokensStaked += _amount;
-        // s_amount_of_stakingToken += _amount;
         i_stakingToken.transfer(msg.sender, _amount);
         s_stakers[msg.sender].isStaking = true;
+        emit TokensStake(msg.sender, _amount);
     }
 
-    function withdrawTokens(uint256 _amount) payable external updateRewards(msg.sender) {
-        if(_amount<0) {revert StakingRewards__YouCantStakeZeroToken();}
-        if(s_stakers[msg.sender].tokensStaked <= _amount) {revert StakingRewards__YouDontHaveEnoughBalance();}
-        require(_amount > 0, "amount = 0");
-        s_stakers[msg.sender].tokensStaked -= _amount;
-        // s_amount_of_stakingToken -= _amount;
-        i_stakingToken.transfer(msg.sender, _amount);
-    }
-
-    function withdrawRewards() payable external updateRewards(msg.sender){
-        if(s_stakers[msg.sender].rewards==0) {revert StakingRewards__YouCantWithdrawZeroRewards();}
-        uint reward = s_stakers[msg.sender].rewards;
-        if (reward > 0) {
-            s_stakers[msg.sender].rewards = 0;
-            i_rewardsToken.transfer(msg.sender, reward);
+    function withdrawTokens(uint256 _amount) external payable updateRewards(msg.sender) {
+        if (_amount < 0) {
+            revert StakingRewards__YouCantStakeZeroToken();
         }
-        // s_amount_of_rewardToken -= reward;
+        if (s_stakers[msg.sender].tokensStaked < _amount) {
+            revert StakingRewards__YouDontHaveEnoughBalance();
+        }
+        s_stakers[msg.sender].tokensStaked -= _amount;
+        i_stakingToken.transfer(msg.sender, _amount);
+        emit TokensWithdraw(msg.sender, _amount);
     }
 
-    function updateRewardsStats() external updateRewards(msg.sender){
-
+    function withdrawRewards() external payable updateRewards(msg.sender) {
+        if (s_stakers[msg.sender].rewards == 0) {
+            revert StakingRewards__YouCantWithdrawZeroRewards();
+        }
+        uint256 reward = s_stakers[msg.sender].rewards;
+        if (i_rewardsToken.balanceOf(address(this)) < reward) {
+            revert StakingRewards__ContractDontHaveEnoughRewardBalance();
+        }
+        s_stakers[msg.sender].rewards = 0;
+        i_rewardsToken.transfer(msg.sender, reward);
+        emit RewardWithdraw(msg.sender, reward);
     }
 
-    function supplyWithRewardToken(uint256 _amount) public {
+    function updateRewardsStats() external updateRewards(msg.sender) {}
 
-    }
-
-    function getIsStaking(address _account) public view returns(bool) {
+    function getIsStaking(address _account) public view returns (bool) {
         return s_stakers[_account].isStaking;
     }
 
-    function getTokensStaked(address _account) public view returns(uint256) {
+    function getTokensStaked(address _account) public view returns (uint256) {
         return s_stakers[_account].tokensStaked;
     }
 
-    function getRewards(address _account) public view returns(uint256) {
+    function getRewards(address _account) public view returns (uint256) {
         return s_stakers[_account].rewards;
     }
 
-    function getStakedRate(address _account) public view returns(uint256) {
+    function getStakedRate(address _account) public view returns (uint256) {
         return s_stakers[_account].stakedRate;
     }
 
-    function getStartStakingTime(address _account) public view returns(uint256) {
+    function getStartStakingTime(address _account) public view returns (uint256) {
         return s_stakers[_account].startStakingTime;
     }
 
-    function getFinishedStakingTime(address _account) public view returns(uint256) {
+    function getFinishedStakingTime(address _account) public view returns (uint256) {
         return s_stakers[_account].finishedStakingTime;
     }
 
-    function getDuration(address _account) public view returns(uint256) {
+    function getDuration(address _account) public view returns (uint256) {
         return s_stakers[_account].duration;
     }
 
-    function getStakingToken() public view returns(address){
+    function getStakingToken() public view returns (address) {
         return address(i_stakingToken);
     }
 
-    function getRewardToken() public view returns(address) {
+    function getRewardToken() public view returns (address) {
         return address(i_rewardsToken);
     }
 
-    function getOwner() public view returns(address) {
+    function getOwner() public view returns (address) {
         return s_owner;
     }
 
@@ -166,8 +173,4 @@ contract StakingRewards {
     // function getAmountOfRewardTokens() public view returns(uint256) {
     //     return s_amount_of_rewardToken;
     // }
-
-    
-
-
 }
