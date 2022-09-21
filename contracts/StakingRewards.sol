@@ -35,6 +35,7 @@ error StakingRewards__YouDontHaveEnoughBalance();
 error StakingRewards__YouCantWithdrawZeroRewards();
 error StakingRewards__DontHaveEnoughTokensToStake();
 error StakingRewards__ContractDontHaveEnoughRewardBalance();
+error StakingRewards__YouCantWithdrawZeroOrLessTokens();
 
 contract StakingRewards {
     struct Staker {
@@ -100,8 +101,8 @@ contract StakingRewards {
     }
 
     function withdrawTokens(uint256 _amount) external payable updateRewards(msg.sender) {
-        if (_amount < 0) {
-            revert StakingRewards__YouCantStakeZeroToken();
+        if (_amount <= 0) {
+            revert StakingRewards__YouCantWithdrawZeroOrLessTokens();
         }
         if (s_stakers[msg.sender].tokensStaked < _amount) {
             revert StakingRewards__YouDontHaveEnoughBalance();

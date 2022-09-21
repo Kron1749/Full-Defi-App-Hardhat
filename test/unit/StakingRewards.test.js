@@ -45,14 +45,12 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   assert.equal(amountOfPlayerTokensForStake.toString(), AMOUNT_TO_STAKE.toString())
               })
           })
-          describe("Staking", function () {
+          describe("Stake tokens", function () {
               it("Must stake first time and get proper values for struct", async function () {
                   const playerConnectedToStakingRewards = stakingRewards.connect(player)
                   const plAddress = player.address
-                  await playerConnectedToStakingRewards.stakeTokens(1)
-                  const numberOfBlock = await ethers.provider.getBlockNumber()
-                  const block = await ethers.provider.getBlock(numberOfBlock)
-                  const timestamp = block.timestamp
+                  expect(await playerConnectedToStakingRewards.stakeTokens(1)).to.emit("TokensStake")
+                  const timestamp = await getTimeStamp(await ethers.provider.getBlockNumber())
                   const isStaking = await playerConnectedToStakingRewards.getIsStaking(plAddress)
                   const tokensStaked = await playerConnectedToStakingRewards.getTokensStaked(
                       plAddress
@@ -80,24 +78,18 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   const stakedRatio = amountOfStakedTokens * 1 // 1 is rate per 1 token
 
                   //Stake tokens and get when this token was staked
-                  await playerConnectedToStakingRewards.stakeTokens(amountOfStakedTokens)
-                  const numberOfBlockBefore = await ethers.provider.getBlockNumber()
-                  const blockBefore = await ethers.provider.getBlock(numberOfBlockBefore)
-                  const timestampBeforeMine = blockBefore.timestamp
+                  expect(await playerConnectedToStakingRewards.stakeTokens(amountOfStakedTokens)).to.emit("TokensStake")
+                  const timestampBeforeMine = await getTimeStamp(await ethers.provider.getBlockNumber())
 
                   //Wait for 7 seconds and get timestamp after wait
                   await network.provider.send("evm_increaseTime", [7])
                   await network.provider.send("evm_mine")
-                  const numberOfBlockAfterMine = await ethers.provider.getBlockNumber()
-                  const blockAfterMine = await ethers.provider.getBlock(numberOfBlockAfterMine)
-                  const timestampAfterMine = blockAfterMine.timestamp
+                  const timestampAfterMine = await getTimeStamp(await ethers.provider.getBlockNumber())
                   const difMine = timestampAfterMine - timestampBeforeMine
 
                   // Update rewards and get
                   await playerConnectedToStakingRewards.updateRewardsStats()
-                  const numberOfBlockAfter = await ethers.provider.getBlockNumber()
-                  const blockAfter = await ethers.provider.getBlock(numberOfBlockAfter)
-                  const timestampAfterUpdateRewards = blockAfter.timestamp
+                  const timestampAfterUpdateRewards = await getTimeStamp(await ethers.provider.getBlockNumber())
                   const difUpdateRewards = timestampAfterUpdateRewards - timestampAfterMine
                   const constRewardsByCalculating =
                       (difUpdateRewards + difMine) * 1 * amountOfStakedTokens // 1 is rate per staked token
@@ -137,51 +129,33 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   const secondStakedRatio = allAmountOfStakedTokens * 1
 
                   //Stake tokensfirst time and get when this token was staked
-                  const numberOfBlockBeforeMineFirstTime = await ethers.provider.getBlockNumber()
-                  const blockBeforeFirstTime = await ethers.provider.getBlock(
-                      numberOfBlockBeforeMineFirstTime
-                  )
-                  const timestampBeforeMineFirstTime = blockBeforeFirstTime.timestamp
+                  const timestampBeforeMineFirstTime = await getTimeStamp(await ethers.provider.getBlockNumber())
 
-                  await playerConnectedToStakingRewards.stakeTokens(firstAmountOfStakedTokens)
+                  expect(await playerConnectedToStakingRewards.stakeTokens(firstAmountOfStakedTokens)).to.emit("TokensStake")
 
                   //Wait for N seconds and get timestamp after wait
                   await network.provider.send("evm_increaseTime", [1])
                   await network.provider.send("evm_mine")
-                  const numberOfBlockAfterMineFirstTime = await ethers.provider.getBlockNumber()
-                  const blockAfterMineFirstTime = await ethers.provider.getBlock(
-                      numberOfBlockAfterMineFirstTime
-                  )
-                  const timestampAfterMineFirstTime = blockAfterMineFirstTime.timestamp
+                  const timestampAfterMineFirstTime = await getTimeStamp(await ethers.provider.getBlockNumber())
                   const difMineFirstTime =
                       timestampAfterMineFirstTime - timestampBeforeMineFirstTime
                   const rewardByCalculatingFirst = difMineFirstTime * firstStakedRatio
 
                   //Stake tokens second time and get when this token was staked
-                  await playerConnectedToStakingRewards.stakeTokens(secondAmountOfStakedTokens)
-                  const numberOfBlockBeforeSecondTime = await ethers.provider.getBlockNumber()
-                  const blockBeforeSecondTime = await ethers.provider.getBlock(
-                      numberOfBlockBeforeSecondTime
-                  )
-                  const timestampBeforeMineSecondTime = blockBeforeSecondTime.timestamp
+                  expect(await playerConnectedToStakingRewards.stakeTokens(secondAmountOfStakedTokens)).to.emit("TokensStake")
+                  const timestampBeforeMineSecondTime = await getTimeStamp(await ethers.provider.getBlockNumber())
 
                   //Wait for N seconds and get timestamp after wait
                   await network.provider.send("evm_increaseTime", [2])
                   await network.provider.send("evm_mine")
-                  const numberOfBlockAfterMineSecondTime = await ethers.provider.getBlockNumber()
-                  const blockAfterMineSecondTime = await ethers.provider.getBlock(
-                      numberOfBlockAfterMineSecondTime
-                  )
-                  const timestampAfterMineSecondTime = blockAfterMineSecondTime.timestamp
+                  const timestampAfterMineSecondTime = await getTimeStamp(await ethers.provider.getBlockNumber())
                   const difMineSecondTime =
                       timestampAfterMineSecondTime - timestampBeforeMineSecondTime
                   const rewardByCalculatingSecond = difMineSecondTime * secondStakedRatio
 
                   // Update rewards and get
                   await playerConnectedToStakingRewards.updateRewardsStats()
-                  const numberOfBlockAfter = await ethers.provider.getBlockNumber()
-                  const blockAfter = await ethers.provider.getBlock(numberOfBlockAfter)
-                  const timestampAfterUpdateRewards = blockAfter.timestamp
+                  const timestampAfterUpdateRewards = await getTimeStamp(await ethers.provider.getBlockNumber())
                   const difUpdateRewards =
                       timestampAfterUpdateRewards - timestampAfterMineSecondTime
                   const rewardAfterUpdating = difUpdateRewards * secondStakedRatio
@@ -222,4 +196,57 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   ).to.be.revertedWith("StakingRewards__DontHaveEnoughTokensToStake")
               })
           })
+          describe("Withdraw tokens",function(){
+            it("Should properly stake tokens and withdraw",async function(){
+                const playerConnectedToStakingRewards = stakingRewards.connect(player)
+                const plAddress = player.address
+                const tokensToStake = 10
+                const tokensToWithdraw = 6
+                const tokensLeft = tokensToStake-tokensToWithdraw
+                const firstStakedRatio = tokensToStake *1
+                const withdrawRatio = tokensLeft*1
+
+                expect(await playerConnectedToStakingRewards.stakeTokens(tokensToStake)).to.emit("TokensStake")
+                const timeStampAfterStaking = await getTimeStamp(await ethers.provider.getBlockNumber())
+
+                expect(await playerConnectedToStakingRewards.withdrawTokens(tokensToWithdraw)).to.emit("TokensWithdraw")
+                const timeStampAfterWithdrawing = await getTimeStamp(await ethers.provider.getBlockNumber())
+                const rewardAfterStaking = (timeStampAfterWithdrawing-timeStampAfterStaking)*firstStakedRatio
+
+                await playerConnectedToStakingRewards.updateRewardsStats()
+                const timestampAfterRewardUpdating = await getTimeStamp(await ethers.provider.getBlockNumber())
+                const rewardAfterWithdrawingTokens = (timestampAfterRewardUpdating-timeStampAfterWithdrawing)*withdrawRatio
+
+                const rewardsCalculated = rewardAfterStaking+rewardAfterWithdrawingTokens
+                const isStaking = await playerConnectedToStakingRewards.getIsStaking(plAddress)
+                const tokensStaked = await playerConnectedToStakingRewards.getTokensStaked(
+                      plAddress
+                  )
+                const rewards = await playerConnectedToStakingRewards.getRewards(plAddress)
+                const stakedRate = await playerConnectedToStakingRewards.getStakedRate(plAddress)
+                assert.equal(isStaking,true)
+                assert.equal(tokensStaked.toString(),tokensLeft)
+                assert.equal(rewards.toString(),rewardsCalculated)
+                assert.equal(stakedRate.toString(),withdrawRatio)
+
+            })
+            it("Should not withdraw if amout for withdraw < 0",async function(){
+                const playerConnectedToStakingRewards = stakingRewards.connect(player)
+                await expect(playerConnectedToStakingRewards.withdrawTokens(0)).to.be.revertedWith("StakingRewards__YouCantWithdrawZeroOrLessTokens")
+            })
+            it("Should not withdraw if user don't have enough tokens",async function(){
+                const playerConnectedToStakingRewards = stakingRewards.connect(player)
+                await playerConnectedToStakingRewards.stakeTokens(5)
+                await expect(playerConnectedToStakingRewards.withdrawTokens(6)).to.be.revertedWith("StakingRewards__YouDontHaveEnoughBalance")
+            })
+          })
+          describe("Witdraw rewards",function(){
+            
+          })
       })
+
+      async function getTimeStamp(_block) {
+                    const block = await ethers.provider.getBlock(_block)
+                  const timestamp = block.timestamp
+                  return timestamp
+      } 
