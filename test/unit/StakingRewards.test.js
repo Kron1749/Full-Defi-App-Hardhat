@@ -8,6 +8,7 @@ const { developmentChains } = require("../../helper-hardhat-config")
           let testToken, stakingRewards, deployer
           const AMOUNT_OF_REWARD_TOKEN = 1000
           const AMOUNT_TO_STAKE = 500
+          const STAKE_RATIO = 1
           beforeEach(async function () {
               accounts = await ethers.getSigners()
               deployer = accounts[0]
@@ -331,6 +332,41 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   const plAddress = player.address
                   const firstAmountToStake = 5
                   const secondAmountToStake = 6
+                  const totalAmountToStake = firstAmountToStake+secondAmountToStake
+                  const firstStakeRatio = firstAmountToStake * STAKE_RATIO
+                  const secondStakeRatio = totalAmountToStake*STAKE_RATIO
+                  
+                  await playerConnectedToStakingRewards.stakeTokens(firstAmountToStake)
+                  const timeStampAfterFirstStake = await getTimeStamp(
+                    await ethers.provider.getBlockNumber()
+                  )
+
+                  
+
+                    // Pass 1 sec
+                  await playerConnectedToStakingRewards.stakeTokens(secondAmountToStake)
+                  const timestampAfterSecondStake = await getTimeStamp(
+                    await ethers.provider.getBlockNumber()
+                  )
+                  //Pass1 sec
+                  const ditTimeStampFirstStake = (timestampAfterSecondStake-timeStampAfterFirstStake)
+                  const rewardAfterFirstStake = ditTimeStampFirstStake*firstStakeRatio
+                  await playerConnectedToStakingRewards.withdrawTokens(totalAmountToStake)
+                  const timestampAfterWithdraw = await getTimeStamp(
+                    await ethers.provider.getBlockNumber()
+                  )
+                  const difTimeStampAfterSecondStake = (timestampAfterWithdraw-timestampAfterSecondStake)
+                  const rewardAfterSecondStake = difTimeStampAfterSecondStake*secondStakeRatio
+                  const rewards = await playerConnectedToStakingRewards.getRewards(plAddress)
+                  const tokensStakedLeft = await playerConnectedToStakingRewards.getTokensStaked(plAddress)  
+                  
+                  await playerConnectedToStakingRewards.withdrawRewards()
+                  const balance = await testToken.balanceOf(plAddress)
+                  const totalRewardsCalculated = rewardAfterFirstStake+rewardAfterSecondStake 
+                  const balananceCalculated = AMOUNT_TO_STAKE+totalRewardsCalculated
+                  assert.equal(rewards.toString(),totalRewardsCalculated.toString())
+                  assert.equal(tokensStakedLeft.toString(),0)
+                  assert.equal(balananceCalculated.toString(),balance.toString())
               })
           })
       })

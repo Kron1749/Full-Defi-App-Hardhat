@@ -6,7 +6,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
 
-    const args = [1000000]
+    const args = [100000000000]
 
     const testToken = await deploy("TestToken", {
         from: deployer,
