@@ -224,6 +224,7 @@ const { developmentChains } = require("../../helper-hardhat-config")
           describe("Withdraw tokens", function () {
               it("Should properly stake tokens and withdraw", async function () {
                   const playerConnectedToStakingRewards = stakingRewards.connect(player)
+
                   const plAddress = player.address
                   const tokensToStake = 10
                   const tokensToWithdraw = 6
@@ -303,7 +304,10 @@ const { developmentChains } = require("../../helper-hardhat-config")
                       (timeStampAfterRewardsWithdraw - timeStampAfterStaking) * stakeRatio
 
                   assert.equal(0, rewards.toString())
-                  assert.equal(AMOUNT_TO_STAKE + rewardsInStakerBalance, balanceOfPlayer)
+                  assert.equal(
+                      AMOUNT_TO_STAKE + rewardsInStakerBalance - tokensStaked,
+                      balanceOfPlayer.toString()
+                  )
               })
               it("Should not withdraw rewards if user don't have any", async function () {
                   const playerConnectedToStakingRewards = stakingRewards.connect(player)
@@ -319,6 +323,14 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   await expect(
                       playerConnectedToStakingRewards.withdrawRewards()
                   ).to.be.revertedWith("StakingRewards__ContractDontHaveEnoughRewardBalance")
+              })
+          })
+          describe("Full test", function () {
+              it("Should stake,wait,stake more,witdraw tokens,withdraw rewards", async function () {
+                  const playerConnectedToStakingRewards = stakingRewards.connect(player)
+                  const plAddress = player.address
+                  const firstAmountToStake = 5
+                  const secondAmountToStake = 6
               })
           })
       })

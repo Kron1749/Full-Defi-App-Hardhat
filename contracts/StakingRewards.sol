@@ -95,7 +95,7 @@ contract StakingRewards {
             revert StakingRewards__DontHaveEnoughTokensToStake();
         }
         s_stakers[msg.sender].tokensStaked += _amount;
-        i_stakingToken.transfer(address(this), _amount);
+        i_stakingToken.transferFrom(msg.sender, address(this), _amount);
         s_stakers[msg.sender].isStaking = true;
         emit TokensStake(msg.sender, _amount);
     }
