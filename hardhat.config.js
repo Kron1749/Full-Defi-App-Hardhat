@@ -6,7 +6,7 @@ require("hardhat-gas-reporter")
 require("hardhat-contract-sizer")
 require("dotenv").config()
 
-const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL
+
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL
 const PRIVATE_KEY = process.env.PRIVATE_KEY
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
@@ -28,17 +28,9 @@ module.exports = {
             chainId: 5,
             blockConfirmations: 6,
         },
-        rinkeby: {
-            url: RINKEBY_RPC_URL,
-            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
-            saveDeployments: true,
-            chainId: 4,
-            blockConfirmations: 6,
-        },
     },
     etherscan: {
         apiKey: {
-            rinkeby: ETHERSCAN_API_KEY,
             goerli: ETHERSCAN_API_KEY,
         },
     },
