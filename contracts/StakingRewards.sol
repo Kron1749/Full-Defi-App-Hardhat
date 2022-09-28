@@ -9,7 +9,7 @@
         2.1 Update how much tokens stake
         2.2 Withdraw tokens from contract
     3. Update rewards for token staking
-        3.1 Calculate rewards
+        3.1 Calculate reward
             3.1.1 Get how much tokens staked
             3.1.2 Get rate for tokens staked = tokensStaked*rateForOneToken
             3.1.3 Get how long(duration) was token staked(in seconds)
@@ -38,6 +38,7 @@ error StakingRewards__ContractDontHaveEnoughRewardBalance();
 error StakingRewards__YouCantWithdrawZeroTokens();
 
 contract StakingRewards {
+
     struct Staker {
         bool isStaking;
         uint256 tokensStaked;
@@ -54,17 +55,10 @@ contract StakingRewards {
 
     IERC20 private immutable i_stakingToken;
     IERC20 private immutable i_rewardsToken;
+    mapping(address => Staker) private s_stakers;
 
     address private s_owner;
-    uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;
-
-    constructor(address _stakingToken, address _rewardsToken) {
-        s_owner = msg.sender;
-        i_stakingToken = IERC20(_stakingToken);
-        i_rewardsToken = IERC20(_rewardsToken);
-    }
-
-    mapping(address => Staker) private s_stakers;
+    uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;    
 
     modifier updateRewards(address _account) {
         if (!s_stakers[msg.sender].isStaking) {
@@ -82,6 +76,12 @@ contract StakingRewards {
             s_stakers[_account].startStakingTime = block.timestamp;
         }
         _;
+    }
+
+        constructor(address _stakingToken, address _rewardsToken) {
+        s_owner = msg.sender;
+        i_stakingToken = IERC20(_stakingToken);
+        i_rewardsToken = IERC20(_rewardsToken);
     }
 
     function stakeTokens(uint256 _amount) external payable updateRewards(msg.sender) {
