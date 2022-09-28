@@ -58,9 +58,6 @@ contract StakingRewards {
     address private s_owner;
     uint256 public constant REWARD_FOR_ONE_TOKEN_STAKED = 1;
 
-    // uint256 private s_amount_of_stakingToken;
-    // uint256 private s_amount_of_rewardToken;
-
     constructor(address _stakingToken, address _rewardsToken) {
         s_owner = msg.sender;
         i_stakingToken = IERC20(_stakingToken);
@@ -167,11 +164,4 @@ contract StakingRewards {
         return s_owner;
     }
 
-    // function getAmountOfStakingTokens() public view returns(uint256) {
-    //     return s_amount_of_stakingToken;
-    // }
-
-    // function getAmountOfRewardTokens() public view returns(uint256) {
-    //     return s_amount_of_rewardToken;
-    // }
 }

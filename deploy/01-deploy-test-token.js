@@ -3,7 +3,7 @@ const { networkConfig, developmentChains } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
-    const { deploy, log } = deployments
+    const { deploy} = deployments
     const { deployer } = await getNamedAccounts()
 
     const args = [100000000000]
@@ -16,7 +16,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     })
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        // If we are on a testnet
         await verify(testToken.address, args)
     }
 }
