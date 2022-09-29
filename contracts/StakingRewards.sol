@@ -1,29 +1,3 @@
-/*
-
-    1. Stake tokens
-        1.0 Update rewards for staking
-        1.1 Deposit tokens to contract
-        1.2 Update how much tokens stake
-    2. Withdraw tokens
-        2.0 Update rewards for staking
-        2.1 Update how much tokens stake
-        2.2 Withdraw tokens from contract
-    3. Update rewards for token staking
-        3.1 Calculate reward
-            3.1.1 Get how much tokens staked
-            3.1.2 Get rate for tokens staked = tokensStaked*rateForOneToken
-            3.1.3 Get how long(duration) was token staked(in seconds)
-                3.1.3.1 Get the start staking time
-                3.1.3.2 getTime when staking was updated(were add more tokens or withdraw)
-            3.1.4 NewRewards = duration*stakeRate
-        3.2 Add this rewards to user rewards
-    4. Withdraw rewards
-        4.1 Transfer reward token from contract
-
-    
-    
-
-*/
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
