@@ -24,18 +24,20 @@ contract AMMSwap {
     event LiquidityRemoved(uint256 indexed shares,uint256 indexed amount0,uint256 indexed amount1);
 
     IERC20 public immutable i_token0;
+    
     IERC20 public immutable i_token1;
 
-    uint public s_balance0;
-    uint public s_balance1;
+    uint private s_balance0;
+    uint private s_balance1;
 
-    uint public s_totalSupply;
-    mapping(address=>uint256) public s_balanceOf;
+    uint private s_totalSupply;
+    mapping(address=>uint256) private s_balanceOf;
 
     constructor(address _token0,address _token1){
         i_token0 = IERC20(_token0);
         i_token1 = IERC20(_token1);
     }
+
 
 
     function swap(address _tokenIn,uint256 _amountIn) external returns(uint256 amountOut) {
@@ -72,7 +74,7 @@ contract AMMSwap {
 
     function addLiquidity(uint256 _amount0,uint256 _amount1) external returns(uint256 shares) {
         // Send token0 and token1
-        if(i_token0.allowance(msg.sender, address(this))>=_amount0 && i_token1.allowance(msg.sender, address(this))>=_amount1) {
+        if(i_token0.allowance(msg.sender, address(this))<=_amount0 || i_token1.allowance(msg.sender, address(this))<=_amount1) {
             revert AMMSWAP_NotEnoughAllowance();
         }
         i_token0.transferFrom(msg.sender, address(this), _amount0);
@@ -145,6 +147,15 @@ contract AMMSwap {
         return s_balance1;
     }
 
+    function getAddressToken0() public view returns(address) {
+        return address(i_token0);
+    } 
+
+    function getAddressToken1() public view returns(address) {
+        return address(i_token1);
+    }
+
+
     function _mint(address _to,uint _amount) private {
         s_balanceOf[_to] += _amount;
         s_totalSupply += _amount;
@@ -159,6 +170,8 @@ contract AMMSwap {
         s_balance0 = _reserve0;
         s_balance1 = _reserve1;
     }
+
+    
 
     // Got from uniswap 
     function _sqrt(uint y) private pure returns (uint z) {
