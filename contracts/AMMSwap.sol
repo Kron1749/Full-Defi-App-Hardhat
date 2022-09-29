@@ -17,7 +17,7 @@ error AMMSWAP_PriceIsNotEqual();
 error AMMSWAP_SharesIsZero();
 error Amount0OrAmount1IsLessOrZero();
 
-contract AMMSWAP {
+contract AMMSwap {
 
     event TokensSwaped(address indexed token0,address indexed token1,uint256 amountIn,uint256 amountOut);
     event LiquidityAdded(uint256 indexed amount0,uint256 indexed amount1,uint256 indexed shares);

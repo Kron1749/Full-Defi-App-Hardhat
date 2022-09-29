@@ -1,9 +1,9 @@
-const { getNamedAccounts, deployments, network, ethers } = require("hardhat")
-const { networkConfig, developmentChains } = require("../helper-hardhat-config")
+const { network, ethers } = require("hardhat")
+const { developmentChains } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
-    const { deploy, log } = deployments
+    const { deploy} = deployments
     const { deployer } = await getNamedAccounts()
     const testToken = await ethers.getContract("TestToken")
     const args = [testToken.address,testToken.address]
@@ -21,4 +21,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 }
 
-module.exports.tags = ["all", "testtoken"]
+module.exports.tags = ["all", "stakingreward"]
