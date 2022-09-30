@@ -12,10 +12,13 @@ error AMMSwap__AmountIsLessThanZero();
 error AMMSwap__NotEnoughAllowance();
 error AMMSwap__PriceIsNotEqual();
 error AMMSwap__SharesIsZero();
-error AMMSwap__Amount0OrAmount1IsLessOrZero();
-error AMMSwap__NotEnoughBalanceOfContract();
+error AMMSwap__BalanceOfToken0IsZero();
+error AMMSwap__BalanceOfToken1IsZero();
+error AMMSwap__BalanceOfTotalSupplyIsZero();
 error AMMSwap__NotEnoughBalanceOfAccout();
 error AMMSwap__NotOwner();
+error AMMSwap__NotEnoughBalanceOfContract();
+error AMMSwap__UserDontHaveEnoughShares();
 
 contract AMMSwap {
     event TokensSwaped(
@@ -132,30 +135,63 @@ contract AMMSwap {
     }
 
     function removeLiquidity(uint256 _shares) external returns (uint256 amount0, uint256 amount1) {
+        if (_shares == 0) {
+            revert AMMSwap__SharesIsZero();
+        }
+        if (s_balanceOf[msg.sender] < _shares) {
+            revert AMMSwap__UserDontHaveEnoughShares();
+        }
+        if (s_totalSupply <= 0) {
+            revert AMMSwap__BalanceOfTotalSupplyIsZero();
+        }
         // calculate amount0 and amount1 to withdraw
         // dx = s/T*Y
         // dy = s/T*Y
         uint256 bal0 = i_token0.balanceOf(address(this));
+        if (bal0 <= 0) {
+            revert AMMSwap__BalanceOfToken0IsZero();
+        }
         uint256 bal1 = i_token1.balanceOf(address(this));
+        if (bal1 <= 0) {
+            revert AMMSwap__BalanceOfToken1IsZero();
+        }
 
         amount0 = (_shares * bal0) / s_totalSupply;
         amount1 = (_shares * bal1) / s_totalSupply;
-        if (amount0 <= 0 || amount1 <= 0) {
-            revert AMMSwap__Amount0OrAmount1IsLessOrZero();
-        }
-        // Burn shares
+
         _burn(msg.sender, _shares);
-        // Update balances
         _updateBalances(bal0 - amount0, bal1 - amount1);
-        // Transfer tokens to msg.sender
         i_token0.transfer(msg.sender, amount0);
         i_token1.transfer(msg.sender, amount1);
         emit LiquidityRemoved(_shares, amount0, amount1);
     }
 
-    function _updateBalances(uint256 _reserve0, uint256 _reserve1) public onlyOwner {
+    function _updateBalances(uint256 _reserve0, uint256 _reserve1) private {
         s_balance0 = _reserve0;
         s_balance1 = _reserve1;
+    }
+
+    function _mint(address _to, uint256 _amount) private {
+        s_balanceOf[_to] += _amount;
+        s_totalSupply += _amount;
+    }
+
+    function _burn(address _from, uint256 _amount) private {
+        s_balanceOf[_from] -= _amount;
+        s_totalSupply -= _amount;
+    }
+
+    function updateBalancesByOwner(
+        uint256 balance0,
+        uint256 balance1,
+        uint256 totalSupply,
+        uint256 shares,
+        address user
+    ) public onlyOwner {
+        s_balance0 = balance0;
+        s_balance1 = balance1;
+        s_totalSupply = totalSupply;
+        s_balanceOf[user] = shares;
     }
 
     function getTotalSupply() public view returns (uint256) {
@@ -182,14 +218,8 @@ contract AMMSwap {
         return address(i_token1);
     }
 
-    function _mint(address _to, uint256 _amount) private {
-        s_balanceOf[_to] += _amount;
-        s_totalSupply += _amount;
-    }
-
-    function _burn(address _from, uint256 _amount) private {
-        s_balanceOf[_from] -= _amount;
-        s_totalSupply -= _amount;
+    function getOwner() public view returns (address) {
+        return s_owner;
     }
 
     // Got from uniswap

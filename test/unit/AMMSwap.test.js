@@ -5,22 +5,25 @@ const { developmentChains } = require("../../helper-hardhat-config")
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("AMMSwap Tests", function () {
-          let testToken0, testToken1, AMMSwap, deployer
+          let testToken0, testToken1, AMMSwap, deployer, player
           const AMOUNT = 100
           beforeEach(async function () {
               accounts = await ethers.getSigners()
               deployer = accounts[0]
+              player = accounts[1]
               await deployments.fixture(["all"])
               testToken0 = await ethers.getContract("TestToken")
               testToken1 = await ethers.getContract("TestToken1")
               AMMSwap = await ethers.getContract("AMMSwap")
           })
           describe("Constructor", function () {
-              it("Should properyl set tokens addresses", async function () {
+              it("Should properly set tokens addresses", async function () {
                   const token0 = await AMMSwap.getAddressToken0()
                   const token1 = await AMMSwap.getAddressToken1()
+                  const owner = await AMMSwap.getOwner()
                   assert.equal(token0, testToken0.address)
                   assert.equal(token1, testToken1.address)
+                  assert.equal(owner, deployer.address)
               })
           })
 
@@ -103,7 +106,15 @@ const { developmentChains } = require("../../helper-hardhat-config")
               })
               it("Should not swap if not enough contract tokens", async function () {
                   await testToken0.increaseAllowance(AMMSwap.address, AMOUNT)
-                  await AMMSwap._updateBalances(0, 10000)
+                  const totalSupply = await AMMSwap.getTotalSupply()
+                  const blOfShares = await AMMSwap.getBalanceOfShares(deployer.address)
+                  await AMMSwap.updateBalancesByOwner(
+                      0,
+                      10000,
+                      totalSupply,
+                      blOfShares,
+                      deployer.address
+                  )
                   await expect(AMMSwap.swap(testToken0.address, AMOUNT)).to.be.revertedWith(
                       "AMMSwap__NotEnoughBalanceOfContract"
                   )
@@ -151,5 +162,59 @@ const { developmentChains } = require("../../helper-hardhat-config")
               })
           })
 
-          describe("Remove Liquidity", function () {})
+          describe("Remove Liquidity", function () {
+              it("Should not remove if shares 0", async function () {
+                  await expect(AMMSwap.removeLiquidity(0)).to.be.revertedWith(
+                      "AMMSwap__SharesIsZero"
+                  )
+              })
+              it("Should not remove if user don't have enough shares", async function () {
+                  await expect(AMMSwap.removeLiquidity(100)).to.be.revertedWith(
+                      "AMMSwap__UserDontHaveEnoughShares"
+                  )
+              })
+              it("Should not remove if total supply is <= 0", async function () {
+                  await AMMSwap.updateBalancesByOwner(0, 0, 0, 10, deployer.address)
+                  await expect(AMMSwap.removeLiquidity(2)).to.be.revertedWith(
+                      "AMMSwap__BalanceOfTotalSupplyIsZero"
+                  )
+              })
+              it("Should not remove if balanceOfToken0 is 0", async function () {
+                  await AMMSwap.updateBalancesByOwner(0, 0, 50, 10, deployer.address)
+                  await expect(AMMSwap.removeLiquidity(2)).to.be.revertedWith(
+                      "AMMSwap__BalanceOfToken0IsZero"
+                  )
+              })
+
+              it("Should not remove if balanceOfToken1 is 0", async function () {
+                  await AMMSwap.updateBalancesByOwner(0, 0, 50, 10, deployer.address)
+                  await testToken0.transfer(AMMSwap.address, 10)
+                  await expect(AMMSwap.removeLiquidity(2)).to.be.revertedWith(
+                      "AMMSwap__BalanceOfToken1IsZero"
+                  )
+              })
+              it("Should propely withdraw liquadity", async function () {
+                  await testToken0.increaseAllowance(AMMSwap.address, AMOUNT)
+                  await testToken1.increaseAllowance(AMMSwap.address, AMOUNT)
+                  expect(await AMMSwap.addLiquidity(AMOUNT, AMOUNT)).to.emit("LiquidityAdded")
+                  expect(await AMMSwap.removeLiquidity(AMOUNT / 2)).to.emit("LiquidityRemoved")
+                  const shares = await AMMSwap.getBalanceOfShares(deployer.address)
+                  const totalSupply = await AMMSwap.getTotalSupply()
+                  const balanceOfToken0 = await AMMSwap.getBalanceOfToken0()
+                  const balanceOfToken1 = await AMMSwap.getBalanceOfToken1()
+                  assert.equal(totalSupply.toString(), AMOUNT / 2)
+                  assert.equal(shares.toString(), AMOUNT / 2)
+                  assert.equal(balanceOfToken0.toString(), AMOUNT / 2)
+                  assert.equal(balanceOfToken1.toString(), AMOUNT / 2)
+              })
+          })
+
+          describe("Other", function () {
+              it("Should not updateBalanceIfNotOwner", async function () {
+                  const playerConnectedToAMMSwap = AMMSwap.connect(player)
+                  await expect(
+                      playerConnectedToAMMSwap.updateBalancesByOwner(1, 2, 3, 4, deployer.address)
+                  ).to.be.revertedWith("AMMSwap__NotOwner")
+              })
+          })
       })
