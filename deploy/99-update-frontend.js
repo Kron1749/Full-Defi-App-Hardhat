@@ -10,7 +10,7 @@ const FRONT_END_STAKING_REWARDS_ABI_FILE =
     "../full-defi-app-hardhat-frontend/Constants/StakingRewards/abiStakingRewards.json"
 
 module.exports = async function () {
-    if (process.env.UPDATE_FRONT_END) {
+    if (process.env.UPDATE_FRONT_END == true) {
         console.log("Updating front end")
         updateContractAddressesTestToken()
         updateAbiTestToken()

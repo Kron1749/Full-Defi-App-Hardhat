@@ -131,8 +131,9 @@ const { developmentChains } = require("../../helper-hardhat-config")
                       "TokensSwaped"
                   )
                   const amountInWithFee = ((AMOUNT / 4) * 997) / 1000
+                  const fee = AMOUNT / 4 - amountInWithFee
                   const balanceOfToken0AfterCalculated =
-                      amountOfToken0Before.toNumber() + AMOUNT / 4
+                      amountOfToken0Before.toNumber() + AMOUNT / 4 - Math.ceil(fee)
                   const balanceOfToken1AfterCalculated = Math.ceil(
                       amountOfToken1Before.toNumber() -
                           ((AMOUNT / 2) * amountInWithFee) / (AMOUNT / 2 + amountInWithFee)
