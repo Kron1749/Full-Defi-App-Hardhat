@@ -1,13 +1,15 @@
 const { ethers, network } = require("hardhat")
-const { moveBlocks } = require("../utils/move-blocks")
+const { moveBlocks } = require("../../utils/move-blocks")
 
-
-async function withdrawRewards(){
+async function withdrawRewards() {
     accounts = await ethers.getSigners()
     deployer = accounts[0]
     const stakingRewards = await ethers.getContract("StakingRewards")
     const stakingToken = await ethers.getContract("TestToken")
-    const txAllowance = await stakingToken.increaseAllowance(stakingRewards.address,stakingToken.totalSupply())
+    const txAllowance = await stakingToken.increaseAllowance(
+        stakingRewards.address,
+        stakingToken.totalSupply()
+    )
     await txAllowance.wait(1)
     const rewards = await stakingRewards.getRewards(deployer.address)
     console.log(rewards.toString())

@@ -1,10 +1,9 @@
 const { ethers, network } = require("hardhat")
-const { moveBlocks } = require("../utils/move-blocks")
-
+const { moveBlocks } = require("../../utils/move-blocks")
 
 const AMOUNT_TO_STAKE = 5
 
-async function withdrawTokens(){
+async function withdrawTokens() {
     const accounts = await ethers.getSigners()
     const deployer = accounts[0]
     const stakingRewards = await ethers.getContract("StakingRewards")
@@ -13,7 +12,7 @@ async function withdrawTokens(){
     // await txAllowance.wait(1)
     const txWithdrawTokens = await stakingRewards.withdrawTokens(AMOUNT_TO_STAKE)
     await txWithdrawTokens.wait(1)
-    const tokenStaked = await stakingRewards.getTokensStaked(deployer.address )
+    const tokenStaked = await stakingRewards.getTokensStaked(deployer.address)
     console.log(`Tokens Staked ${tokenStaked.toString()}`)
 
     if (network.config.chainId == "31337") {

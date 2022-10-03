@@ -1,7 +1,7 @@
 const { ethers, network } = require("hardhat")
-const { moveBlocks } = require("../utils/move-blocks")
+const { moveBlocks } = require("../../utils/move-blocks")
 
-async function topUpContract(){
+async function topUpContract() {
     accounts = await ethers.getSigners()
     deployer = accounts[0]
     const stakingRewards = await ethers.getContract("StakingRewards")
