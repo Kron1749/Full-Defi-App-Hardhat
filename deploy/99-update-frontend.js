@@ -1,6 +1,9 @@
 const { ethers, network } = require("hardhat")
 const fs = require("fs")
 
+const FRONT_END_FAUCET_ADDRESSES = "../full-defi-app-hardhat-frontend/Constants/Faucet/contractAddressesFaucet.json"
+const FRONT_ENF_FAUCET_ABI_FILE = "../full-defi-app-hardhat-frontend/Constants/Faucet/abiFaucet.json"
+
 const FRONT_END_TEST_TOKEN0_ADDRESSES =
     "../full-defi-app-hardhat-frontend/Constants/TestToken0/contractAddressesTestToken0.json"
 const FRONT_END_TEST_TOKEN0_ABI_FILE =
@@ -22,7 +25,7 @@ const FRONT_END_STAKING_REWARDS_ABI_FILE =
     "../full-defi-app-hardhat-frontend/Constants/StakingRewards/abiStakingRewards.json"
 
 module.exports = async function () {
-    if (process.env.UPDATE_FRONT_END) {
+    if (process.env.UPDATE_FRONT_END == 2) {
         console.log("Updating front end")
         await updateContractAddressesTestToken0()
         await updateAbiTestToken0()
@@ -32,8 +35,36 @@ module.exports = async function () {
         await updateABIStakingRewards()
         await updateContractAddressesAMMSwap()
         await updateABIAMMSwap()
+        await updateContractAddressesFaucet()
+        await updateAbiFaucet()
         console.log("Updated")
     }
+}
+
+async function updateContractAddressesFaucet() {
+    const faucet = await ethers.getContract("Faucet")
+    const chainId = network.config.chainId.toString()
+    const currentFaucetAddresses = JSON.parse(
+        fs.readFileSync(FRONT_END_FAUCET_ADDRESSES, "utf8")
+    )
+
+    if (chainId in currentFaucetAddresses) {
+        if (!currentFaucetAddresses[chainId].includes(faucet.address)) {
+            currentFaucetAddresses[chainId].push(faucet.address)
+        }
+    } else {
+        currentFaucetAddresses[chainId] = [faucet.address]
+    }
+
+    fs.writeFileSync(FRONT_END_FAUCET_ADDRESSES, JSON.stringify(currentFaucetAddresses))
+}
+
+async function updateAbiFaucet() {
+    const faucet = await ethers.getContract("Faucet")
+    fs.writeFileSync(
+        FRONT_ENF_FAUCET_ABI_FILE,
+        faucet.interface.format(ethers.utils.FormatTypes.json)
+    )
 }
 
 async function updateContractAddressesTestToken0() {
