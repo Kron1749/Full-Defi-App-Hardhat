@@ -17,8 +17,9 @@
         3.2 Other users get rewards from staking
  */
 
- // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
@@ -27,41 +28,45 @@ import "./PriceConverter.sol";
 
 error Lottery__NotEnoughEth();
 
-
 contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
     using PriceConverter for uint256;
     enum LotteryState {
         OPEN,
         CALCULATING
     }
-    
+
     //Chainlink variables
-    AggregatorV3Interface private immutable  i_priceFeed;
+    AggregatorV3Interface private immutable i_priceFeed;
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
-    uint64 private immutable i_subscriptionId; 
-    uint32 private immutable i_callbackGasLimit; 
-    bytes32 private immutable i_gasLane; 
+    uint64 private immutable i_subscriptionId;
+    uint32 private immutable i_callbackGasLimit;
+    bytes32 private immutable i_gasLane;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
-    //Lottery variables 
+    //Lottery variables
     address payable[] private s_players;
     address private immutable i_owner;
     mapping(address => uint256) private s_chanceOfWin;
-    uint256 public constant MINIMUM_AMOUNT = 10*10**18; // in use need to convert to eth
+    uint256 private constant MINIMUM_AMOUNT = 10 * 10**18; // in wei
     uint256 private immutable i_interval;
     uint256 public counter; // How much lotteries passed
     uint256 private s_lastTimeStamp;
     LotteryState private s_lotteryState;
     address private s_recentWinner;
 
-
-    constructor(address priceFeed,address vrfCoordinatorV2,uint64 subscriptionId,
+    constructor(
+        address priceFeed,
+        address vrfCoordinatorV2,
+        uint64 subscriptionId,
         uint32 callbackGasLimit,
-        bytes32 gasLane,uint256 interval) {
-        i_owner = msg.sender;
-        i_priceFeed = AggregatorV3Interface(priceFeed);
+        bytes32 gasLane,
+        uint256 interval
+    ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
+        i_priceFeed = AggregatorV3Interface(priceFeed);
+        i_callbackGasLimit = callbackGasLimit;
+        i_owner = msg.sender;
         i_subscriptionId = subscriptionId;
         i_gasLane = gasLane;
         i_interval = interval;
@@ -70,13 +75,15 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         s_lotteryState = LotteryState.OPEN;
     }
 
-    function enterLottery() external {
-        if(msg.value.GetValueInDollar(i_priceFeed)<MINIMUM_AMOUNT) {
+    function enterLottery(uint256 _amount) external payable {
+        if (_amount.GetValueInDollar(i_priceFeed) < MINIMUM_AMOUNT) {
             revert Lottery__NotEnoughEth();
         }
-        uint256 amountToEnterWithFee = (msg.value * 997) / 1000; //Todo this in way,need to upgrade
-        uint256 fee = msg.value - amountToEnterWithFee;
-        s_chanceOfWin[msg.sender] = (address(this).balance * msg.value)/100; //Todo this in way,upgrade
+        uint256 amountToEnterWithFee = (_amount * 997) / 1000;
+        uint256 fee = _amount - amountToEnterWithFee;
+        payable(i_owner).transferFrom(msg.sender, fee); //Todo transferFrom не уверен что будет работать
+        s_chanceOfWin[msg.sender] = (this.balanceOf(address(this)) * msg.value) * 100;
+        payable(address(this)).transferFrom(msg.sender, address(this), amountToEnterWithFee);
         s_players.push(payable(msg.sender));
     }
 
@@ -122,6 +129,34 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         s_players = new address payable[](0); // creating new array of players
         s_lotteryState = LotteryState.OPEN; // updating lottery state
         s_lastTimeStamp = block.timestamp; //updating timestamp
-        payable(recentWinner).transfer(address(this).balance); //transfer amount
+        i_token.transfer(recentWinner, i_token.balanceOf(address(this)));
+    }
+
+    function getLotteryState() public view returns (LotteryState) {
+        return s_lotteryState;
+    }
+
+    function getMinimumValue() public pure returns (uint256) {
+        return MINIMUM_AMOUNT;
+    }
+
+    function getInterval() public view returns (uint256) {
+        return i_interval;
+    }
+
+    function getPlayer(uint256 index) public view returns (address) {
+        return s_players[index];
+    }
+
+    function getLastTimeStamp() public view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getRecentWinner() public view returns (address) {
+        return s_recentWinner;
+    }
+
+    function getNumberOfPlayers() public view returns (uint256) {
+        return s_players.length;
     }
 }
