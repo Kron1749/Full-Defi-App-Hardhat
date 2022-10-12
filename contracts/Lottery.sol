@@ -46,11 +46,12 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
     //Lottery variables
     address payable[] private s_players;
+    mapping(address=>uint256) private balanceOfPlayers;
     address private immutable i_owner;
     mapping(address => uint256) private s_chanceOfWin;
     uint256 private constant MINIMUM_AMOUNT = 10 * 10**18; // in wei
     uint256 private immutable i_interval;
-    uint256 public counter; // How much lotteries passed
+    uint256 private  s_counter; // How much lotteries passed
     uint256 private s_lastTimeStamp;
     LotteryState private s_lotteryState;
     address private s_recentWinner;
@@ -71,20 +72,24 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         i_gasLane = gasLane;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
-        counter = 0;
+        s_counter = 0;
         s_lotteryState = LotteryState.OPEN;
     }
 
-    function enterLottery(uint256 _amount) external payable {
+    function enterLottery() external payable {
+        uint256 _amount = msg.value;
+        if(balanceOfPlayers[msg.sender]==0) {
+            s_players.push(payable(msg.sender));
+        }
+        balanceOfPlayers[msg.sender] += _amount;
         if (_amount.GetValueInDollar(i_priceFeed) < MINIMUM_AMOUNT) {
             revert Lottery__NotEnoughEth();
         }
-        uint256 amountToEnterWithFee = (_amount * 997) / 1000;
+        uint256 amountToEnterWithFee = (_amount * 998) / 1000;
         uint256 fee = _amount - amountToEnterWithFee;
-        payable(i_owner).transferFrom(msg.sender, fee); //Todo transferFrom не уверен что будет работать
-        s_chanceOfWin[msg.sender] = (this.balanceOf(address(this)) * msg.value) * 100;
-        payable(address(this)).transferFrom(msg.sender, address(this), amountToEnterWithFee);
-        s_players.push(payable(msg.sender));
+        payable(i_owner).transfer(fee); 
+        s_chanceOfWin[msg.sender] = (balanceOfPlayers[msg.sender] / address(this).balance) * 100;
+        payable(address(this)).transfer(amountToEnterWithFee);
     }
 
     function checkUpkeep(
@@ -129,19 +134,43 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         s_players = new address payable[](0); // creating new array of players
         s_lotteryState = LotteryState.OPEN; // updating lottery state
         s_lastTimeStamp = block.timestamp; //updating timestamp
-        i_token.transfer(recentWinner, i_token.balanceOf(address(this)));
+        payable(recentWinner).transfer(address(this).balance);
     }
 
+    function getInterval() public view returns(uint256) {
+        return i_interval;
+    }
+    function gasLane() public view returns(bytes32) {
+        return i_gasLane;
+    }
+
+    function getSubscription() public view returns(uint64) {
+        return i_subscriptionId;
+    }
+    function getCallBackGasLimit() public view returns(uint32) {
+        return i_callbackGasLimit;
+    }
+    function getPriceFeed() public view returns(address) {
+        return address(i_priceFeed);
+    }
+
+    function getVrfCoordinator() public view returns(address) {
+        return address(i_vrfCoordinator);
+    }
     function getLotteryState() public view returns (LotteryState) {
         return s_lotteryState;
     }
 
-    function getMinimumValue() public pure returns (uint256) {
-        return MINIMUM_AMOUNT;
+    function getOwner() public view returns(address) {
+        return i_owner;
     }
 
-    function getInterval() public view returns (uint256) {
-        return i_interval;
+    function getCounter() public view returns(uint256) {
+        return s_counter;
+    }
+
+    function getMinimumValue() public pure returns (uint256) {
+        return MINIMUM_AMOUNT;
     }
 
     function getPlayer(uint256 index) public view returns (address) {
@@ -159,4 +188,9 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
     function getNumberOfPlayers() public view returns (uint256) {
         return s_players.length;
     }
+
+    receive() external payable {} //Todo add function
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
 }

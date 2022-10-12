@@ -34,5 +34,20 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         ? 1
         : VERIFICATION_BLOCK_CONFIRMATIONS
 
-    const arguments = [ethUsdPriceFeedAddress, vrfCoordinatorV2Address]
+    const arguments = [ethUsdPriceFeedAddress, vrfCoordinatorV2Address,subscriptionId,networkConfig[chainId]["callbackGasLimit"],
+    networkConfig[chainId]["gasLane"],
+    networkConfig[chainId]["keepersUpdateInterval"],]
+    
+    const lottery = await deploy("Lottery",{
+        from:deployer,
+        args:arguments,
+        log:true,
+        waitConfirmations:waitBlockConfirmations
+    })
+    if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+        // If we are on a testnet
+        await verify(lottery.address, arguments)
+    }
 }
+
+module.exports.tags = ["all", "lottery"]
